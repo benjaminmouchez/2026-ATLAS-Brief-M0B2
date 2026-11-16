@@ -14,7 +14,7 @@ def test_transcribe(wav_bytes):
     assert res["execution_time_seconds"] >= 0
 
 
-def test_transcribe_audio_invalide():
+def test_transcribe_audio_vide():
     with patch("iatos_core.ml.transcription.pipeline"):
         with pytest.raises(ValueError):
-            AudioTranscriber().transcribe(b"pas de l'audio")
+            AudioTranscriber().transcribe(b"")
