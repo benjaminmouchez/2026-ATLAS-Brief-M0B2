@@ -1,7 +1,10 @@
 """Configuration et fixtures pytest."""
 
+import io
 import sys
+import wave
 from pathlib import Path
+import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
@@ -21,3 +24,18 @@ def client():
     """Fixture retournant un client de test FastAPI."""
     with TestClient(app) as test_client:
         yield test_client
+
+
+@pytest.fixture
+def wav_bytes():
+    """Fabrique un petit fichier WAV mono 16 bits en memoire."""
+    def _creer():
+        buffer = io.BytesIO()
+        with wave.open(buffer, "wb") as wav:
+            wav.setnchannels(1)
+            wav.setsampwidth(2)
+            wav.setframerate(16000)
+            wav.writeframes(np.zeros(16000, dtype=np.int16).tobytes())
+        return buffer.getvalue()
+
+    return _creer

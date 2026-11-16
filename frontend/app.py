@@ -38,6 +38,7 @@ with st.sidebar:
     - **Page 0** : Chatbot Agentique (LangGraph)
     - **Page 1** : Scoring Credit (Regression Lineaire)
     - **Page 2** : Analyse de Sentiment (NLTK)
+    - **Page 3** : Dictée Vocale (Whisper Tiny)
     """)
     st.divider()
     st.caption("Projet OPCO Atlas - Simplon & Atos 2026")

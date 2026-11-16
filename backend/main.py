@@ -7,16 +7,18 @@ Vous devez completer les routes ci-dessous en vous appuyant sur :
 """
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from iatos_core import __version__
 from iatos_core.logger import logger
 from iatos_core.ml.scoring import CreditScoringPredictor
 from iatos_core.ml.sentiment import SentimentAnalyzer
+from iatos_core.ml.transcription import AudioTranscriber
 from iatos_core.agent.graph import run_agent_message
 
 from backend.schemas import (
+    AudioTranscribeResponse,
     ChatRequest,
     ChatResponse,
     CreditPredictRequest,
@@ -29,6 +31,7 @@ from backend.schemas import (
 # Services partages (Singletons en memoire)
 scoring_predictor: CreditScoringPredictor = None
 sentiment_analyzer: SentimentAnalyzer = None
+audio_transcriber: AudioTranscriber = None
 
 
 @asynccontextmanager
@@ -40,12 +43,13 @@ async def lifespan(app: FastAPI):
     2. Instancier le SentimentAnalyzer() et l'assigner a la variable globale sentiment_analyzer.
     3. Logger le succes de l'initialisation avec loguru.
     """
-    global scoring_predictor, sentiment_analyzer
+    global scoring_predictor, sentiment_analyzer, audio_transcriber
     logger.info("Demarrage des services FastAPI IA-TOS...")
     
     scoring_predictor = CreditScoringPredictor()
     sentiment_analyzer = SentimentAnalyzer()
-    logger.info("Modeles de scoring et de sentiment charges en memoire.")
+    audio_transcriber = AudioTranscriber()
+    logger.info("Modeles de scoring, de sentiment et Whisper charges en memoire.")
 
     yield
     logger.info("Arret des services FastAPI IA-TOS.")
@@ -54,7 +58,7 @@ async def lifespan(app: FastAPI):
 # Instanciation de l'application FastAPI
 app = FastAPI(
     title="Plateforme IA-TOS - API Multi-Services",
-    description="API exposant l'agent conversationnel LangGraph, le scoring de credit et l'analyse de sentiment.",
+    description="API exposant l'agent conversationnel LangGraph, le scoring de credit, l'analyse de sentiment et la transcription vocale Whisper.",
     version=__version__,
     lifespan=lifespan,
 )
@@ -149,3 +153,20 @@ def predict_sentiment(payload: SentimentPredictRequest):
     except Exception as exc:
         logger.error("Erreur sur /predict/sentiment : {err}", err=exc)
         raise HTTPException(status_code=500, detail="Erreur interne du service de sentiment.")
+
+
+@app.post("/audio/transcribe", response_model=AudioTranscribeResponse, tags=["Traitement Audio"])
+async def transcribe_audio(file: UploadFile = File(...)):
+    """Endpoint de transcription d'une note vocale WAV (Whisper Tiny)."""
+    global audio_transcriber
+    try:
+        if audio_transcriber is None:
+            audio_transcriber = AudioTranscriber()
+        contenu = await file.read()
+        resultat = audio_transcriber.transcribe(contenu)
+        return AudioTranscribeResponse(filename=file.filename, **resultat)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except Exception as exc:
+        logger.error("Erreur sur /audio/transcribe : {err}", err=exc)
+        raise HTTPException(status_code=500, detail="Erreur interne du service de transcription.")

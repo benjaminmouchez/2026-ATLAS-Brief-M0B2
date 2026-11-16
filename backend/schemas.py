@@ -50,6 +50,14 @@ class SentimentPredictResponse(BaseModel):
     type_modele: str
 
 
+# Schema pour la Transcription Audio
+class AudioTranscribeResponse(BaseModel):
+    filename: str = Field(..., description="Nom d'origine du fichier audio envoye")
+    transcription: str = Field(..., description="Texte integral transcrit par Whisper")
+    language: str = Field(default="fr", description="Code langue detecte")
+    execution_time_seconds: float = Field(..., description="Duree du traitement en secondes")
+
+
 # Schema de statut de service
 class HealthResponse(BaseModel):
     status: str
